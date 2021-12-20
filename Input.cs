@@ -58,7 +58,11 @@ namespace euroDiffusion
         private bool    reading(TextReader istream)
         {
             inputStruct inp = new inputStruct();
-            string str = istream.ReadLine();
+            string str = "";
+            while (str == "")
+            {
+                str = istream.ReadLine();
+            }
             if (int.TryParse(str, out inp.countriesNumber) == false) {
                 throw new Exception("Incorrect countries number. It is not a number. : \"" + str + "\"");
             }
