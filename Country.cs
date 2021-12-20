@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace euroDiffusion
 {
-    class Country
+    class Country : IComparer<Country>, IComparable<Country>
     {
         string              name;
         List<Town>          towns;
@@ -26,29 +26,47 @@ namespace euroDiffusion
             this.yh = yh;
         }
 
-        public bool is_full()
+        public int          Compare(Country left, Country right)
         {
-            return incompleteTowns.Count == 0;
+            return string.Compare(left.getName(), right.getName());
         }
-        public void addTown(Town town)
+
+        public int          CompareTo(Country other)
         {
-            towns.Add(town);
+            return this.name.CompareTo(other.getName());
+        }
+
+        public bool         is_full()
+        {
+            return this.incompleteTowns.Count == 0;
+        }
+        public void         addTown(Town town)
+        {
+            this.towns.Add(town);
             if (town.is_full() == false)
-                incompleteTowns.Add(town);
+                this.incompleteTowns.Add(town);
         }
         
-        public void registCompleteTown(Town town)
+        public void         registCompleteTown(Town town)
         {
-            incompleteTowns.Remove(town);
+            this.incompleteTowns.Remove(town);
             if (is_full())
-                simulation.registFullCountry(this);
+                this.simulation.registFullCountry(this);
         }
 
-        public string   getName() { return name; }
-
-        public void     updateWalletsInTowns()
+        public string       getName()
         {
-            foreach (var town in towns)
+            return this.name;
+        }
+
+        public List<Town>   getTowns()
+        {
+            return this.towns;
+        }
+
+        public void         updateWalletsInTowns()
+        {
+            foreach (var town in this.towns)
                 town.update_wallets();
         }
     }

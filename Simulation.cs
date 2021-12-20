@@ -13,22 +13,23 @@ namespace euroDiffusion
         List<Country> incompleteCountries;
         List<Country> completeToday;
 
-        public      Simulation(List<string> input)
+        public      Simulation(inputStruct input)
         {
-            input.Sort();
-            countries           = new List<Country>();
-            incompleteCountries = new List<Country>();
-            completeToday       = new List<Country>();
-            foreach (var str in input)
+            this.countries           = new List<Country>(input.countriesNumber);
+            this.incompleteCountries = new List<Country>(input.countriesNumber);
+            this.completeToday       = new List<Country>(input.countriesNumber);
+            for (int i = 0; i < input.countriesNumber; ++i)
             {
-                string[] arr = str.Split(new[] { ' ', '\t', ',', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                string countryName = arr[0];
-                int xl = int.Parse(arr[1]) - 1, yl = int.Parse(arr[2]) - 1, xh = int.Parse(arr[3]), yh = int.Parse(arr[4]);
-                countries.Add(new Country(countryName, xl, yl, xh, yh, this));
+                this.countries.Add(new Country(input.countryNames[i],
+                                            input.coordinates[i,0],
+                                            input.coordinates[i,1],
+                                            input.coordinates[i,2],
+                                            input.coordinates[i,3],
+                                            this));
             }
         }
 
-        static void print_map(Town[,] map, int y, int x)
+        static void         print_map(Town[,] map, int y, int x)
         {
             for (int j = 0; j < y; ++j)
             {
@@ -43,7 +44,7 @@ namespace euroDiffusion
             }
         }
 
-        List<int> getExtrCoords()
+        List<int>           getExtrCoords()
         {
             List<int> result = new List<int>();
 
@@ -67,7 +68,7 @@ namespace euroDiffusion
             return result;
         }
 
-        void init_country(Town[,] map, Country country, List<int> extrCoords, int allCountryNumber)
+        void                init_country(Town[,] map, Country country, List<int> extrCoords, int allCountryNumber)
         {
             int dx = extrCoords[0], dy = extrCoords[1];
             for (int y = country.yl - dy; y < country.yh - dy; ++y)
@@ -79,10 +80,10 @@ namespace euroDiffusion
                 }
             }
             if (country.is_full() == false)
-                incompleteCountries.Add(country);
+                this.incompleteCountries.Add(country);
         }
 
-        void init_neighbourgs(Town[,] map, int y, int x)
+        void                init_neighbourgs(Town[,] map, int y, int x)
         {
             for (int j = 0; j < y; ++j)
             {
@@ -105,17 +106,17 @@ namespace euroDiffusion
 
         public void    registFullCountry(Country country)
         {
-            completeToday.Add(country);
-            incompleteCountries.Remove(country);
+            this.completeToday.Add(country);
+            this.incompleteCountries.Remove(country);
         }
 
-        void    updateWalletsInCountries()
+        void            updateWalletsInCountries()
         {
             foreach (var country in countries)
                 country.updateWalletsInTowns();
         }
 
-        void    distribute(Town[,] map, int y, int x)
+        void            distribute(Town[,] map, int y, int x)
         {
             for (int j = 0; j < y; ++j)
             {
@@ -127,36 +128,69 @@ namespace euroDiffusion
             }
         }
 
-        void loop_simulation(Town[,] map, int y, int x)
+        void            printFinishedCountry(string name, int day)
+        {
+            Console.Write("  ");
+            Console.Write(name);
+            Console.Write(' ');
+            Console.WriteLine(day);
+        }
+
+        void            loop_simulation(Town[,] map, int y, int x)
         {
             int day = 1;
 
-            if (incompleteCountries.Count == 0)
+            if (this.incompleteCountries.Count == 0)
             {
-                foreach(var country in countries)
+                foreach (var country in countries)
                 {
-                    Console.Write(country.getName());
-                    Console.Write(' ');
-                    Console.WriteLine(0);
+                    printFinishedCountry(country.getName(), 0);
                 }
             }
 
             while (true)
             {
                 if (day != 0)
-                    completeToday = new List<Country>();
-                distribute(map, y, x);
-                updateWalletsInCountries();
-                foreach (var country in completeToday)
+                    this.completeToday = new List<Country>();
+                this.distribute(map, y, x);
+                this.updateWalletsInCountries();
+                this.completeToday.Sort();
+                foreach (var country in this.completeToday)
                 {
-                    Console.Write(country.getName());
-                    Console.Write(' ');
-                    Console.WriteLine(day);
+                    printFinishedCountry(country.getName(), day);
                 }
-                if (incompleteCountries.Count == 0)
+                if (this.incompleteCountries.Count == 0)
                     break;
                 ++day;
             }
+        }
+
+        bool            graphTravers(Town town)
+        {
+            if (town.isVisited() == true)
+                return true;
+            town.setVisited(true);
+            for (int i = 0; i < town.getNeighbourgs().Count; ++i)
+            {
+                graphTravers(town.getNeighbourgs()[i]);
+            }
+            return true;
+        }
+
+        bool            isConnectedGraph(Town town)
+        {
+            graphTravers(town);
+            foreach (var country in countries)
+            {
+                foreach (var t in country.getTowns())
+                {
+                    if (t.isVisited() == false)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
 
 
@@ -167,12 +201,14 @@ namespace euroDiffusion
             int x = extrCoords[2] - extrCoords[0];
 
             Town[,] map = new Town[y, x];
-            foreach (var country in countries)
+            foreach (var country in this.countries)
             {
-                init_country(map, country, extrCoords, countries.Count);
+                init_country(map, country, extrCoords, this.countries.Count);
             }
-            init_neighbourgs(map, y, x);
-            loop_simulation(map, y, x);
+            this.init_neighbourgs(map, y, x);
+            if (this.isConnectedGraph(map[countries[0].yl, countries[0].xl]) == false)
+                throw new Exception("Error: the sities is not connected.");
+            this.loop_simulation(map, y, x);
         }
     }
 }
