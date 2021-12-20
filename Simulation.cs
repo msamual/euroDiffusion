@@ -9,23 +9,28 @@ namespace euroDiffusion
     class Simulation
     {
 
-        List<Country> countries;
-        List<Country> incompleteCountries;
-        List<Country> completeToday;
+        Country[]       countries;
+        int             size;
+        int             incompleteCountries;
+        Country[]       completeToday;
+        int             completeTodayCount;
 
         public      Simulation(inputStruct input)
         {
-            this.countries           = new List<Country>(input.countriesNumber);
-            this.incompleteCountries = new List<Country>(input.countriesNumber);
-            this.completeToday       = new List<Country>(input.countriesNumber);
+            this.size                   = input.countriesNumber;
+            this.countries              = new Country[this.size];
+            this.incompleteCountries    = size;
+            this.completeToday          = new Country[size];
+            this.completeTodayCount     = 0;
+
             for (int i = 0; i < input.countriesNumber; ++i)
             {
-                this.countries.Add(new Country(input.countryNames[i],
-                                            input.coordinates[i,0],
-                                            input.coordinates[i,1],
-                                            input.coordinates[i,2],
-                                            input.coordinates[i,3],
-                                            this));
+                this.countries[i] = new Country(input.countryNames[i],
+                                            input.coordinates[i, 0],
+                                            input.coordinates[i, 1],
+                                            input.coordinates[i, 2],
+                                            input.coordinates[i, 3],
+                                            this);
             }
         }
 
@@ -44,9 +49,9 @@ namespace euroDiffusion
             }
         }
 
-        List<int>           getExtrCoords()
+        int[]           getExtrCoords()
         {
-            List<int> result = new List<int>();
+            int[] result = new int[4];
 
             int lowX = int.MaxValue, lowY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
             foreach (var country in countries)
@@ -60,15 +65,15 @@ namespace euroDiffusion
                 if (country.yh > maxY)
                     maxY = country.yh;
             }
-            result.Add(lowX);
-            result.Add(lowY);
-            result.Add(maxX);
-            result.Add(maxY);
+            result[0] = lowX;
+            result[1] = lowY;
+            result[2] = maxX;
+            result[3] = maxY;
 
             return result;
         }
 
-        void                init_country(Town[,] map, Country country, List<int> extrCoords, int allCountryNumber)
+        void                init_country(Town[,] map, Country country, int[] extrCoords, int allCountryNumber)
         {
             int dx = extrCoords[0], dy = extrCoords[1];
             for (int y = country.yl - dy; y < country.yh - dy; ++y)
@@ -79,8 +84,8 @@ namespace euroDiffusion
                     country.addTown(map[y, x]);
                 }
             }
-            if (country.is_full() == false)
-                this.incompleteCountries.Add(country);
+            if (country.is_full())
+                this.incompleteCountries--;
         }
 
         void                init_neighbourgs(Town[,] map, int y, int x)
@@ -106,8 +111,8 @@ namespace euroDiffusion
 
         public void    registFullCountry(Country country)
         {
-            this.completeToday.Add(country);
-            this.incompleteCountries.Remove(country);
+            this.completeToday[completeTodayCount++] = country;
+            this.incompleteCountries--;
         }
 
         void            updateWalletsInCountries()
@@ -128,6 +133,31 @@ namespace euroDiffusion
             }
         }
 
+
+        void            swap(int i)
+        {
+            Country tmp             = completeToday[i];
+            completeToday[i]        = completeToday[i - 1];
+            completeToday[i - 1]    = tmp;
+        }
+
+        void            sortNames()
+        {
+            int count;
+            do
+            {
+                count = 0;
+                for (int i = 1; i < this.completeTodayCount; ++i)
+                {
+                    if (string.Compare(this.completeToday[i].getName(), this.completeToday[i - 1].getName()) < 0)
+                    {
+                        swap(i);
+                        ++count;
+                    }
+                }
+            } while (count != 0);
+        }
+
         void            printFinishedCountry(string name, int day)
         {
             Console.Write("  ");
@@ -140,7 +170,7 @@ namespace euroDiffusion
         {
             int day = 1;
 
-            if (this.incompleteCountries.Count == 0)
+            if (this.incompleteCountries < 1)
             {
                 foreach (var country in countries)
                 {
@@ -151,15 +181,18 @@ namespace euroDiffusion
             while (true)
             {
                 if (day != 0)
-                    this.completeToday = new List<Country>();
+                {
+                    this.completeToday      = new Country[size];
+                    this.completeTodayCount = 0;
+                }
                 this.distribute(map, y, x);
                 this.updateWalletsInCountries();
-                this.completeToday.Sort();
-                foreach (var country in this.completeToday)
+                sortNames();
+                for (int i = 0; i < this.completeTodayCount; ++i)
                 {
-                    printFinishedCountry(country.getName(), day);
+                    printFinishedCountry(this.completeToday[i].getName(), day);
                 }
-                if (this.incompleteCountries.Count == 0)
+                if (this.incompleteCountries < 1)
                     break;
                 ++day;
             }
@@ -170,7 +203,7 @@ namespace euroDiffusion
             if (town.isVisited() == true)
                 return true;
             town.setVisited(true);
-            for (int i = 0; i < town.getNeighbourgs().Count; ++i)
+            for (int i = 0; i < town.getNeigbCount(); ++i)
             {
                 graphTravers(town.getNeighbourgs()[i]);
             }
@@ -196,14 +229,14 @@ namespace euroDiffusion
 
         public void     start()
         {
-            List<int> extrCoords = getExtrCoords();
+            int[] extrCoords = getExtrCoords();
             int y = extrCoords[3] - extrCoords[1];
             int x = extrCoords[2] - extrCoords[0];
 
             Town[,] map = new Town[y, x];
             foreach (var country in this.countries)
             {
-                init_country(map, country, extrCoords, this.countries.Count);
+                init_country(map, country, extrCoords, this.size);
             }
             this.init_neighbourgs(map, y, x);
             if (this.isConnectedGraph(map[countries[0].yl, countries[0].xl]) == false)

@@ -17,8 +17,10 @@ namespace euroDiffusion
 
     class Input
     {
-        List<inputStruct>   data;
-        char[]              separators;  
+        inputStruct[]       data;
+        int                 dataSize;
+        int                 dataCapacity;
+        char[]              separators;
 
         public  Input()
         {
@@ -27,17 +29,30 @@ namespace euroDiffusion
 
         public  Input(string filePath)
         {
+            this.data           = new inputStruct[5];
+            this.dataCapacity   = 5;
+            this.dataSize       = 0;
+            this.separators     = new char[2] { ' ', '\t' };
+
             if (File.Exists(filePath) == false)
                 throw new Exception("file \"" + filePath + "\" doesn't exist");
             StreamReader file = new StreamReader(filePath);
             if (file.EndOfStream == true)
                 throw new Exception("file is empty");
-            this.data = new List<inputStruct>();
-            this.separators = new char[2]{' ', '\t'};
             while (reading(file) != false)
             {
                 ;
             }
+        }
+
+        void            reallocate()
+        {
+            inputStruct[] newStruct = new inputStruct[this.dataCapacity * 2];
+            for (int i = 0; i < this.dataSize; ++i)
+            {
+                newStruct[i] = data[i];
+            }
+            data = newStruct;
         }
 
         private bool    reading(TextReader istream)
@@ -62,7 +77,9 @@ namespace euroDiffusion
                 str = istream.ReadLine();
                 parseString(str.Trim(), inp, i);
             }
-            this.data.Add(inp);
+            if (this.dataSize == this.dataCapacity)
+                reallocate();
+            this.data[this.dataSize++] = inp;
             return true;
         }
 
@@ -119,7 +136,7 @@ namespace euroDiffusion
 
         public int              getSize()
         {
-            return this.data.Count;
+            return this.dataSize;
         }
     }
 }

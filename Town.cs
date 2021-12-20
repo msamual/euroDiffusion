@@ -4,13 +4,12 @@ namespace euroDiffusion
 {
     class Town
     {
-        public const int StartCapital = 1000000;
-        public const int SendLimit = 1000;
+        public const int        SendLimit      = 1000;
 
-
-        Dictionary<string, int> wallets;
-        Dictionary<string, int> newWallets;
-        List<Town>              neigbourgs;
+        Wallet                  wallet;
+        Wallet                  newWallet;
+        Town[]                  neigbourgs;
+        int                     neigbourgsCount;
         int                     allCountriesNumber;
         bool                    visited;
         bool                    full;
@@ -18,70 +17,63 @@ namespace euroDiffusion
 
         public Town(Country country, int allCountriesNumber)
         {
-            wallets         = new Dictionary<string, int>();
-            newWallets      = new Dictionary<string, int>();
-            neigbourgs      = new List<Town>();
-            this.country    = country;
+            wallet              = new Wallet(country.getName(), allCountriesNumber);
+            newWallet           = new Wallet(allCountriesNumber);
+            neigbourgs          = new Town[4];
+            this.country        = country;
 
-            this.wallets.Add(country.getName(), StartCapital);
             this.allCountriesNumber = allCountriesNumber;
             this.full = false;
             this.visited = false;
-            if (allCountriesNumber == this.wallets.Count)
+            if (wallet.isFull())
             {
                 this.full = true;
-                this.country.registCompleteTown(this);
+                this.country.registCompleteTown();
             }
         }
 
         public void         distribute()
         {
-            foreach (var town in this.neigbourgs)
+            for (int j = 0; j < neigbourgsCount; ++j)
             {
-                foreach (var countryName in this.wallets.Keys)
+                for (int i = 0; i < wallet.getSize(); ++i)
                 {
-                    if (this.wallets[countryName] >= SendLimit)
+                    if (this.wallet.at(i) >= SendLimit)
                     {
-                        town.receive(countryName, this.wallets[countryName] / SendLimit);
+                        neigbourgs[j].receive(wallet.getName(i), this.wallet.at(i) / SendLimit);
                     }
                 }
             }
-            foreach (var countryName in new List<string>(wallets.Keys))
+            for (int i = 0; i < wallet.getSize(); ++i)
             {
-                int count = this.wallets[countryName] / SendLimit * this.neigbourgs.Count;
-                this.wallets[countryName] -= count;
+                int count = this.wallet.at(i) / SendLimit * this.neigbourgsCount;
+                this.wallet.add(i, -count);
             }
         }
 
         public void         update_wallets()
         {
-            foreach (var wallet in this.newWallets)
+            for (int i = 0; i < newWallet.getSize(); ++i)
             {
-                if (this.wallets.ContainsKey(wallet.Key))
-                    this.wallets[wallet.Key] += wallet.Value;
-                else
-                    this.wallets.Add(wallet.Key, wallet.Value);
+                wallet.add(newWallet.getName(i), newWallet.at(i));
             }
-            this.newWallets = new Dictionary<string, int>();
-            if (this.full == false && this.wallets.Count == this.allCountriesNumber)
+            newWallet = new Wallet(allCountriesNumber);
+            if (!this.is_full() && this.wallet.isFull())
             {
+                this.country.registCompleteTown();
                 this.full = true;
-                this.country.registCompleteTown(this);
             }
         }
 
         public void         receive(string contryName, int count)
         {
-            if (this.newWallets.ContainsKey(contryName))
-                this.newWallets[contryName] += count;
-            else
-                this.newWallets.Add(contryName, count);
+            this.newWallet.add(contryName, count);
         }
 
 
         public void         setNeigbourgh(Town town)
         {
-            this.neigbourgs.Add(town);
+            this.neigbourgs[this.neigbourgsCount++] = town;
         }
 
         public void         setVisited(bool visited)
@@ -89,9 +81,14 @@ namespace euroDiffusion
             this.visited = visited;
         }
 
-        public List<Town>   getNeighbourgs()
+        public Town[]       getNeighbourgs()
         {
             return this.neigbourgs;
+        }
+
+        public int          getNeigbCount()
+        {
+            return this.neigbourgsCount;
         }
 
         public bool         is_full()

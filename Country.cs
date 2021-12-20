@@ -9,21 +9,36 @@ namespace euroDiffusion
     class Country : IComparer<Country>, IComparable<Country>
     {
         string              name;
-        List<Town>          towns;
+        Town[]              towns;
+        int                 incompleteTowns;
+        int                 countTowns;
         public int          xl, yl, xh, yh;
-        List<Town>          incompleteTowns;
         Simulation          simulation;
 
         public  Country(string name, int xl, int yl, int xh, int yh, Simulation simulation)
         {
             this.simulation = simulation;
-            towns = new List<Town>();
-            incompleteTowns = new List<Town>();
-            this.name = name;
-            this.xl = xl;
-            this.yl = yl;
-            this.xh = xh;
-            this.yh = yh;
+            towns           = new Town[(xh - xl) * (yh - yl)];
+            incompleteTowns = 0;
+            this.countTowns = 0;
+            this.name       = name;
+            this.xl         = xl;
+            this.yl         = yl;
+            this.xh         = xh;
+            this.yh         = yh;
+        }
+
+        public Country(Country other)
+        {
+            this.simulation         = other.simulation;
+            this.towns              = other.towns;
+            this.incompleteTowns    = other.incompleteTowns;
+            this.countTowns         = other.countTowns;
+            this.name               = other.name;
+            this.xl                 = other.xl;
+            this.yl                 = other.yl;
+            this.xh                 = other.xh;
+            this.yh                 = other.yh;
         }
 
         public int          Compare(Country left, Country right)
@@ -38,18 +53,18 @@ namespace euroDiffusion
 
         public bool         is_full()
         {
-            return this.incompleteTowns.Count == 0;
+            return this.incompleteTowns < 1;
         }
         public void         addTown(Town town)
         {
-            this.towns.Add(town);
-            if (town.is_full() == false)
-                this.incompleteTowns.Add(town);
+            this.towns[this.countTowns++] = town;
+            if (!town.is_full())
+                this.incompleteTowns++;
         }
         
-        public void         registCompleteTown(Town town)
+        public void         registCompleteTown()
         {
-            this.incompleteTowns.Remove(town);
+            this.incompleteTowns--;
             if (is_full())
                 this.simulation.registFullCountry(this);
         }
@@ -59,9 +74,14 @@ namespace euroDiffusion
             return this.name;
         }
 
-        public List<Town>   getTowns()
+        public Town[]      getTowns()
         {
             return this.towns;
+        }
+
+        public int         getSize()
+        {
+            return this.countTowns;
         }
 
         public void         updateWalletsInTowns()

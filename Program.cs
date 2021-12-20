@@ -13,8 +13,7 @@ namespace euroDiffusion
         static void Main(string[] args)
         {
             Input input;
-            try
-            {
+
                 if (args.Length < 1)
                 {
                     input = new Input();
@@ -31,11 +30,7 @@ namespace euroDiffusion
                     Console.WriteLine(i + 1);
                     simulation.start();
                 }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception: " + e.Message);
-            }
+
 
 
             while (true) ;
